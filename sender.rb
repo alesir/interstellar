@@ -6,22 +6,23 @@ require 'yaml'
 
 CONFIG = YAML.load_file('./secrets/secrets.yml')
 
-date = Date.today-2
+date = Date.today-1
 
 file_date = date.strftime("%Y%m")
-csv_file_name = "#{CONFIG["package_name"]}_#{file_date}.csv"
+csv_file_name = "crashes_#{CONFIG["package_name"]}_#{file_date}.csv"
 
-system "BOTO_PATH=./secrets/.boto gsutil/gsutil cp -r gs://#{CONFIG["app_repo"]}/reviews/#{csv_file_name} ."
-
+system "BOTO_PATH=./secrets/.boto gsutil/gsutil cp gs://#{CONFIG["app_repo"]}/crashes/#{csv_file_name} ."
 
 class Slack
   def self.notify(message)
+  
     RestClient.post CONFIG["slack_url"], {
       payload:
-      { text: message }.to_json
+      { text: message, icon_emoji: ":fire:", username: "GPlay Crashes", channel: "#{CONFIG["channel"]}" }.to_json
     },
     content_type: :json,
     accept: :json
+    
   end
 end
 
@@ -32,77 +33,71 @@ class Review
 
   def self.send_reviews_from_date(date)
     message = collection.select do |r|
-      r.submitted_at > date && (r.title || r.text)
+	r.crashdate > date
     end.sort_by do |r|
-      r.submitted_at
+	r.crashdate
     end.map do |r|
-      r.build_message
+	r.build_message
     end.join("\n")
-
 
     if message != ""
       Slack.notify(message)
     else
-      print "No new reviews\n"
+      print "No new crashes\n"
     end
   end
 
-  attr_accessor :text, :title, :submitted_at, :original_subitted_at, :rate, :device, :url, :version, :edited
+    attr_accessor :crashdate, :device, :osversion, :appversion, :appversioncode, :message, :crashlib, :crash, :url
 
   def initialize data = {}
-    @text = data[:text] ? data[:text].to_s.encode("utf-8") : nil
-    @title = data[:title] ? "*#{data[:title].to_s.encode("utf-8")}*\n" : nil
-
-    @submitted_at = DateTime.parse(data[:submitted_at].encode("utf-8"))
-    @original_subitted_at = DateTime.parse(data[:original_subitted_at].encode("utf-8"))
-
-    @rate = data[:rate].encode("utf-8").to_i
+  
+    @crashdate = DateTime.parse(data[:crashdate].encode("utf-8"))
     @device = data[:device] ? data[:device].to_s.encode("utf-8") : nil
-    @url = data[:url].to_s.encode("utf-8")
-    @version = data[:version].to_s.encode("utf-8")
-    @edited = data[:edited]
-  end
+    @osversion = data[:osversion] ? data[:osversion].to_s.encode("utf-8") : nil
+    @appversion = data[:appversion] ? data[:appversion].to_s.encode("utf-8") : nil
+    @appversioncode = data[:appversioncode] ? data[:appversioncode].to_s.encode("utf-8") : nil
+    @message = data[:message] ? data[:message].to_s.encode("utf-8") : nil
+    @crashlib = data[:crashlib] ? data[:crashlib].to_s.encode("utf-8") : nil
+    @crash = data[:crash] ? data[:crash].to_s.encode("utf-8") : nil
+    @url = data[:url] ? data[:url].to_s.encode("utf-8") : nil
 
-  def notify_to_slack
-    if text || title
-      message = "*Rating: #{rate}* | version: #{version} | subdate: #{submitted_at}\n #{[title, text].join(" ")}\n <#{url}|Ответить в Google play>"
-      Slack.notify(message)
-    end
   end
 
   def build_message
-    date = if edited
-             "subdate: #{original_subitted_at.strftime("%d.%m.%Y at %I:%M%p")}, edited at: #{submitted_at.strftime("%d.%m.%Y at %I:%M%p")}"
-           else
-             "subdate: #{submitted_at.strftime("%d.%m.%Y at %I:%M%p")}"
-           end
-
-    stars = rate.times.map{"★"}.join + (5 - rate).times.map{"☆"}.join
-
+    
+    date = "Date: #{crashdate.strftime("%d.%m.%Y at %I:%M%p")}"
+    
+    if crashlib
+	acrash = "#{crash}".gsub(", /","\n/")
+    end
+    
     [
-      "\n\n#{stars}",
-      "Version: #{version} | #{date}",
-      "#{[title, text].join(" ")}",
-      "<#{url}|Ответить в Google play>"
+	"\n\n#{date}",
+	"OS Version: #{osversion}, Device: #{device}",
+	"App Version: #{appversion}, App Versioncode: #{appversioncode}",
+	"Message: #{message}",
+	"<#{url}|Crash url>",
+	"Stack: \n#{acrash}"
     ].join("\n")
+
   end
+  
 end
 
 CSV.foreach(csv_file_name, encoding: 'bom|utf-16le', headers: true) do |row|
-  # If there is no reply - push this review
-  if row[11].nil?
+
     Review.collection << Review.new({
-      text: row[10],
-      title: row[9],
-      submitted_at: row[6],
-      edited: (row[4] != row[6]),
-      original_subitted_at: row[4],
-      rate: row[8],
-      device: row[3],
-      url: row[14],
-      version: row[1],
+    crashdate: row[1],
+    device: row[3],
+    osversion: row[4],
+    appversion: row[5],
+    appversioncode: row[6],
+    message: row[8],
+    crashlib: row[13],
+    crash: row[14],
+    url: row[15],
     })
-  end
+
 end
 
 Review.send_reviews_from_date(date)
