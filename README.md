@@ -13,7 +13,7 @@ It is intended to be fired once a day via cron.
 1. create a file `secrets/secrets.yml`. There is an example in `secrets/secrets.yml.example`.
 
   You will need to provide:
-  - report bucket id. Found in the Reviews page of Google Play Developer console, e.g. `pubsite_prod_rev_01234567890987654321`
+  - report bucket id. Found in the Crashes & ANRs page of Google Play Developer console, e.g. `pubsite_prod_rev_01234567890987654321`
   - package name, eg `com.example.reader`, found in the Google Play Developer console
   - slack incoming webhook url, create new one via [direct link](https://slack.com/services/new/incoming-webhook) once you've logged in to the slack
 
