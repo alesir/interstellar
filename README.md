@@ -1,8 +1,6 @@
 # Interstellar
 Small ruby app to get crash dumps for you Google Play Store-released application to the Slack channel.
 
-![slack](https://raw.githubusercontent.com/meduza-corp/interstellar/master/slack_screenshot.jpg?token=AAyQJbZeASPCKj8YppJQFsOTtR8FLUeDks5U5ysrwA%3D%3D)
-
 ## How it works
 Google Play [exports](https://support.google.com/googleplay/android-developer/answer/138230) all your app crashes once a day to the [Google Cloud Storage](https://cloud.google.com/storage/docs) bucket.
 
