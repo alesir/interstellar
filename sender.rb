@@ -11,7 +11,7 @@ date = Date.today-1
 file_date = date.strftime("%Y%m")
 csv_file_name = "crashes_#{CONFIG["package_name"]}_#{file_date}.csv"
 
-system "BOTO_PATH=./secrets/.boto gsutil/gsutil cp gs://#{CONFIG["app_repo"]}/crashes/#{csv_file_name} ."
+system({"BOTO_PATH"=>"./secrets/.boto"}, "gsutil/gsutil cp gs://#{CONFIG["app_repo"]}/crashes/#{csv_file_name} .")
 
 class Slack
   def self.notify(message)
